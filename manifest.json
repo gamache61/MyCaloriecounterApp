@@ -1,0 +1,17 @@
+{
+  "name": "MyColoriecounterApp",
+  "short_name": "MyColorie",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#1a73e8",
+  "description": "Personal health tracker and calorie counter.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3062/3062321.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

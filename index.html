@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyColoriecounterApp</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { color: #1a73e8; text-align: center; margin-top: 0; }
+        .section-title { font-size: 14px; font-weight: bold; color: #1a73e8; margin: 20px 0 10px 0; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        label { display: block; font-size: 11px; color: #5f6368; font-weight: bold; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; border: 1px solid #dadce0; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; margin-top: 10px; transition: 0.2s; }
+        .btn-profile { background: #1a73e8; color: white; }
+        .btn-ai { background: #6200ea; color: white; }
+        .btn-add { background: #34a853; color: white; }
+        .btn-save { background: #5f6368; color: white; margin-top: 10px; }
+        .btn-clear { background: #ea4335; color: white; margin-top: 30px; font-size: 12px; }
+        .dashboard { background: #e8f0fe; padding: 15px; border-radius: 10px; margin-top: 20px; border: 1px solid #1a73e8; }
+        .stat-line { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .highlight { font-weight: 800; color: #1a73e8; }
+        .archive-list { margin-top: 15px; max-height: 200px; overflow-y: auto; }
+        .archive-item { background: #f8f9fa; padding: 10px; border-radius: 8px; margin-bottom: 5px; border-left: 4px solid #34a853; display: flex; justify-content: space-between; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>MyColoriecounterApp</h2>
+
+    <div class="section-title">0. AI Settings</div>
+    <label>Groq API Key</label>
+    <input type="password" id="groqKey" placeholder="gsk_..." onchange="saveKey()">
+
+    <div class="section-title">1. Profile & Goal</div>
+    <div class="grid">
+        <div><label id="weightLabel">Weight</label><input type="number" id="weight"></div>
+        <div><label id="heightLabel">Height</label><input type="number" id="height"></div>
+        <div><label>Age</label><input type="number" id="age"></div>
+        <div><label>Gender</label><select id="gender"><option value="male">Male</option><option value="female">Female</option></select></div>
+        <div style="grid-column: span 2;">
+            <label>Measurement System</label>
+            <select id="unitSystem" onchange="toggleUnits()">
+                <option value="metric">Metric (kg / cm)</option>
+                <option value="imperial">Imperial (lb / in)</option>
+            </select>
+        </div>
+    </div>
+    <button class="btn-profile" onclick="saveProfile()">Calculate Daily Goal</button>
+
+    <div class="section-title">2. AI Logger</div>
+    <input type="text" id="foodInput" placeholder="Ex: 2 slices of pepperoni pizza">
+    <button class="btn-ai" id="aiBtn" onclick="fetchAICalories()">AI Calculate</button>
+
+    <div class="grid" style="margin-top:10px;">
+        <div><label>Portion</label><input type="number" id="portion" value="1" step="0.1" oninput="updateTotal()"></div>
+        <div><label>Est. Calories</label><input type="number" id="baseCal" style="background:#f3e5f5;" readonly></div>
+    </div>
+    <button class="btn-add" onclick="logFood()">+ Log Meal</button>
+
+    <div class="dashboard">
+        <div class="stat-line">Goal: <span id="displayGoal" class="highlight">0 kcal</span></div>
+        <div class="stat-line">Total Consumed: <span id="displayTotal" class="highlight">0 kcal</span></div>
+        <div class="stat-line" style="border-top:1px solid #1a73e8; padding-top:8px; margin-top:5px;">
+            Remaining: <span id="displayRemaining" class="highlight">0 kcal</span>
+        </div>
+    </div>
+
+    <div class="section-title">Daily Archive</div>
+    <div id="archiveList" class="archive-list"></div>
+
+    <button class="btn-save" onclick="downloadData()">💾 Download History (.txt)</button>
+    <button class="btn-clear" onclick="clearData()">Clear History (Keep API Key)</button>
+</div>
+
+<script>
+    let rawAiCals = 0;
+    const TODAY_STR = new Date().toLocaleDateString();
+
+    window.onload = () => { loadData(); refreshUI(); toggleUnits(); };
+
+    function saveKey() { localStorage.setItem('groq_key', document.getElementById('groqKey').value); }
+
+    function toggleUnits() {
+        const system = document.getElementById('unitSystem').value;
+        document.getElementById('weightLabel').innerText = system === 'metric' ? 'Weight (kg)' : 'Weight (lb)';
+        document.getElementById('heightLabel').innerText = system === 'metric' ? 'Height (cm)' : 'Height (in)';
+    }
+
+    function saveProfile() {
+        const age = parseInt(document.getElementById('age').value);
+        let weight = parseFloat(document.getElementById('weight').value);
+        let height = parseFloat(document.getElementById('height').value);
+        const gender = document.getElementById('gender').value;
+        const system = document.getElementById('unitSystem').value;
+        if (!age || !weight || !height) return alert("Fill all info");
+        if (system === 'imperial') { weight *= 0.453592; height *= 2.54; }
+        let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+        bmr = (gender === 'male') ? bmr + 5 : bmr - 161;
+        const goal = Math.round(bmr * 1.2);
+        localStorage.setItem('health_goal', goal);
+        refreshUI();
+        alert("Goal set!");
+    }
+
+    async function fetchAICalories() {
+        const key = localStorage.getItem('groq_key');
+        const food = document.getElementById('foodInput').value;
+        const btn = document.getElementById('aiBtn');
+        if (!key || !food) return alert("Enter Groq Key and Food");
+        btn.innerText = "Analyzing..."; btn.disabled = true;
+
+        try {
+            const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                method: "POST",
+                headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    model: "llama-3.1-8b-instant",
+                    messages: [
+                        {role: "system", content: "Return ONLY the integer calorie count. Consistent, no text."},
+                        {role: "user", content: `Total calories for: ${food}`}
+                    ],
+                    temperature: 0 
+                })
+            });
+            const data = await response.json();
+            rawAiCals = parseInt(data.choices[0].message.content.replace(/\D/g, '')) || 0;
+            updateTotal();
+        } catch (e) { alert("AI Error"); }
+        finally { btn.innerText = "AI Calculate"; btn.disabled = false; }
+    }
+
+    function updateTotal() {
+        const portion = parseFloat(document.getElementById('portion').value) || 1;
+        document.getElementById('baseCal').value = Math.round(rawAiCals * portion);
+    }
+
+    function logFood() {
+        const cals = parseInt(document.getElementById('baseCal').value);
+        if (!cals) return;
+        let total = parseInt(localStorage.getItem('health_calories')) || 0;
+        let newTotal = total + cals;
+        localStorage.setItem('health_calories', newTotal);
+        let archive = JSON.parse(localStorage.getItem('calorie_archive')) || {};
+        archive[TODAY_STR] = newTotal;
+        localStorage.setItem('calorie_archive', JSON.stringify(archive));
+        document.getElementById('foodInput').value = '';
+        document.getElementById('baseCal').value = '';
+        refreshUI();
+    }
+
+    function loadData() {
+        document.getElementById('groqKey').value = localStorage.getItem('groq_key') || '';
+        document.getElementById('age').value = localStorage.getItem('health_age') || '';
+        document.getElementById('weight').value = localStorage.getItem('health_weight') || '';
+        document.getElementById('height').value = localStorage.getItem('health_height') || '';
+    }
+
+    function refreshUI() {
+        const goal = parseInt(localStorage.getItem('health_goal')) || 0;
+        const total = parseInt(localStorage.getItem('health_calories')) || 0;
+        const archive = JSON.parse(localStorage.getItem('calorie_archive')) || {};
+        document.getElementById('displayGoal').innerText = goal + " kcal";
+        document.getElementById('displayTotal').innerText = total + " kcal";
+        document.getElementById('displayRemaining').innerText = (goal - total) + " kcal";
+        const archDiv = document.getElementById('archiveList'); archDiv.innerHTML = '';
+        Object.keys(archive).sort((a,b) => new Date(b) - new Date(a)).forEach(date => {
+            archDiv.innerHTML += `<div class="archive-item"><span>${date}</span><strong>${archive[date]} kcal</strong></div>`;
+        });
+    }
+
+    // NEW DOWNLOAD FUNCTION
+    function downloadData() {
+        const archive = JSON.parse(localStorage.getItem('calorie_archive')) || {};
+        if (Object.keys(archive).length === 0) return alert("No history to save!");
+        
+        let text = "MyColoriecounterApp - Calorie History\n";
+        text += "--------------------------------------\n";
+        Object.keys(archive).sort((a,b) => new Date(b) - new Date(a)).forEach(date => {
+            text += `${date}: ${archive[date]} kcal\n`;
+        });
+
+        const blob = new Blob([text], { type: 'text/plain' });
+        const anchor = document.createElement('a');
+        anchor.download = `calorie_history_${new Date().toISOString().slice(0,10)}.txt`;
+        anchor.href = window.URL.createObjectURL(blob);
+        anchor.click();
+    }
+
+    function clearData() {
+        if (confirm("Reset profile/history? (API Key will stay)")) {
+            const k = localStorage.getItem('groq_key'); localStorage.clear();
+            localStorage.setItem('groq_key', k); location.reload();
+        }
+    }
+</script>
+</body>
+</html>
