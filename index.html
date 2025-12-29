@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Tracker</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>Health Tracker</h2>
+
+    <div class="grid">
+        <div><label>Weight</label><input type="number" id="weight"></div>
+        <div><label>Height</label><input type="number" id="height"></div>
+        <div><label>Age</label><input type="number" id="age"></div>
+        <div><label>Unit System</label>
+            <select id="unitSystem">
+                <option value="metric">Metric (kg/cm)</option>
+                <option value="imperial">Imperial (lb/in)</option>
+            </select>
+        </div>
+    </div>
+    <button class="btn-profile" onclick="calculateAndSave()">1. Save Profile & Set Goal</button>
+
+    <hr>
+
+    <div style="position:relative;">
+        <label>Food Search</label>
+        <input type="text" id="foodInput" placeholder="Search..." oninput="searchFood()">
+        <div id="foodSuggestions"></div>
+    </div>
+
+    <div class="grid" style="margin-top:15px;">
+        <div><label>Base Cals</label><input type="number" id="baseCal"></div>
+        <div><label>Portion (0.5, 1, 2)</label><input type="number" id="portion" value="1" step="0.1"></div>
+    </div>
+    <button class="btn-add" onclick="addCalories()">2. Log This Food</button>
+
+    <div class="dashboard">
+        <div class="stat-line">Daily Goal: <span id="displayGoal" class="highlight">0 kcal</span></div>
+        <div class="stat-line">Today's Total: <span id="displayTotal" class="highlight">0 kcal</span></div>
+        <div class="stat-line" style="font-size: 1.2em; border-top: 2px solid #1a73e8; padding-top: 10px; margin-top: 5px;">
+            Remaining: <span id="displayRemaining" class="highlight">0 kcal</span>
+        </div>
+    </div>
+
+    <div class="history-section">
+        <label>History Log</label>
+        <div id="historyLog"></div>
+        <button class="btn-clear" onclick="clearAllData()">Reset All Data</button>
+    </div>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
